@@ -15,8 +15,8 @@ class Product(db.Model):
     BrandId = db.Column(db.Integer, nullable=False)
     ImportPrice = db.Column(db.Integer, nullable=False)
     CategoryId = db.Column(db.Integer, nullable=False)
+    Inventory = db.Column(db.Integer, nullable=False)
     Sold = db.Column(db.Integer, nullable=False)
-    Images = db.Column(db.Text, nullable=False)
     
 
     def __init__(self, name, price):
