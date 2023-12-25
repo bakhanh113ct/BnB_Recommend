@@ -27,7 +27,7 @@ with app.app_context():
     # db.create_all()
 
     users = Product.query.all()
-    print(users[0].Inventory)
+    print(users[0].Desc)
 
 
 def tokenizer(text):
@@ -55,7 +55,7 @@ def get_trip_id(trips_df, index):
 
 @app.route("/")
 def hello_world():
-    return "<p>Xin chào, Đồ án 2</p>"
+    return "<p>Hello world</p>"
 
 
 class UndertheseaTokenizer:
