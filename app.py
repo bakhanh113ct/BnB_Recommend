@@ -26,8 +26,23 @@ db.init_app(app)
 with app.app_context():
     # db.create_all()
 
-    users = Product.query.all()
-    print(users[0].Desc)
+    products = Product.query.all()
+    product_data = [
+    {
+        'Id': product.Id,
+        'Name': product.Name,
+        'Desc': product.Desc,
+        'Price': product.Price,
+        'BrandId': product.BrandId,
+        'ImportPrice': product.ImportPrice,
+        'CategoryId': product.CategoryId,
+        'Inventory': product.Inventory,
+        'Sold': product.Sold
+    }
+    for product in products
+    ]
+    df = pd.DataFrame(product_data)
+
 
 
 def tokenizer(text):
@@ -63,36 +78,54 @@ class UndertheseaTokenizer:
         return word_tokenize(text)
 
 
-@app.route("/recommend_trips", methods=['POST'])
+@app.route("/recommend_products", methods=['GET'])
 def get_recommendations():
-    id_trip = json.loads(request.data.decode('utf-8'))['idTrip']
+    # id_trip = json.loads(request.data.decode('utf-8'))['idTrip']
     # query.getData(id_trip)
     # add_data_user(request.data,id_trip)
     # trips_df = pd.read_csv(id_trip+'.csv')
     # trips_df['text'] = trips_df['title'] + ' ' + trips_df['description']+ ' ' + trips_df['activities']
-    # vectorizer = TfidfVectorizer(tokenizer=UndertheseaTokenizer())
-    # tfidf_matrix = vectorizer.fit_transform(trips_df['text'])
-    # cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
-    # print(tfidf_matrix)
-    # data=request.data
-    # data=json.loads(data.decode('utf-8'))
-    # trip_id = data['idTrip']
-    # # df_tfidf = pd.DataFrame(tfidf_matrix.toarray(), index=trips_df['title'], columns=vectorizer.vocabulary_.keys())
-    # # df_tfidf.head()
-    # try:
-    #     trip_index = get_trip_index(trips_df,trip_id)
-    # except IndexError:
-    #     return jsonify({"error": f"Trip '{trip_id}' not found"}), 404
+    products = Product.query.all()
+    product_data = [
+    {
+        'Id': product.Id,
+        'Name': product.Name,
+        'Desc': product.Desc,
+        'Price': product.Price,
+        'BrandId': product.BrandId,
+        'ImportPrice': product.ImportPrice,
+        'CategoryId': product.CategoryId,
+        'Inventory': product.Inventory,
+        'Sold': product.Sold
+    }
+    for product in products
+    ]
+    df = pd.DataFrame(product_data)
+    vectorizer = TfidfVectorizer(tokenizer=UndertheseaTokenizer())
+    tfidf_matrix = vectorizer.fit_transform(df['Desc'])
+    cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
+    product_id ="1"
+    try:
+        # Find the index of the product in the DataFrame
+        product_index = df[df['Id'] == product_id].index[0]
 
-    # sim_scores = list(enumerate(cosine_sim[trip_index]))
-    # sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
-    # sim_scores = sim_scores[1:11]
+        # Get similarity scores of all products with the given product
+        sim_scores = list(enumerate(cosine_sim[product_index]))
 
-    # recommended_trips_indices = [i[0] for i in sim_scores]
-    # recommended_trips = [get_trip_id(trips_df,i) for i in recommended_trips_indices]
-    # os.remove(id_trip+'.csv')
-    # return jsonify({"recommended_trips": recommended_trips}), 200
-    return jsonify({"recommended_trips": 'recommended_trips'}), 200
+        # Sort products based on similarity scores
+        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+
+        # Select top similar products (excluding the given product itself)
+        top_similar_products = sim_scores[1:11]  # Change the range as needed
+
+        # Retrieve recommended product IDs
+        recommended_product_ids = [df.iloc[i[0]]['Id'] for i in top_similar_products]
+
+        # Return recommended product IDs as a JSON response
+        return jsonify({"recommended_products": recommended_product_ids}), 200
+
+    except IndexError:
+        return jsonify({"error": "Product ID not found"}), 404
 
 
 if __name__ == "__main__":
