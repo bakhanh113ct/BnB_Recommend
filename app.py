@@ -25,21 +25,6 @@ app.config.from_mapping(
 
 db.init_app(app)
 
-with app.app_context():
-    # db.create_all()
-    print('init done')
-
-    # users = Product.query.filter_by(Name="Gorgeous Concrete Towels").all()
-    # print(users)
-    # orders = Order.query.filter_by(UserId="1").all()
-    # # print(orders)
-    # ordersID = [o.Id for o in orders]
-    # # print(ordersID)
-    # order_items = OrderItems.query.filter_by(OrderId=func.any(ordersID)).all()
-    # # print(order_items)
-    # productsId = [o.ProductId for o in order_items]
-    # products = Product.query.filter_by(Id=func.any(productsId)).all()
-    # print(products)
         
 
 def getOrdersByUserId(userId):
@@ -53,40 +38,9 @@ def getOrdersByUserId(userId):
     products = Product.query.filter_by(Id=func.any(productsId)).all()
     # print(products)
     return products
-    # orders = Order.query.all()
-    # filtered = [project for project in orders if project.UserId == "11"]
-    # # print(filtered)
-    # for i in range(len(filtered)):
-    #     order_items = OrderItems.query.all()
-    #     itemsFiltered = [project for project in order_items if project.OrderId == filtered[i].Id]
-    #     for j in range(len(itemsFiltered)):
-    #         print(itemsFiltered[j].ProductId) 
-    #         products = Product.query.all()
-    #         productFiltered = [project for project in products if project.Id == itemsFiltered[j].ProductId]
-    #         for k in range(len(productFiltered)):
-    #             print(productFiltered[k].Name)
 
 def tokenizer(text):
     return word_tokenize(text, format="text")
-
-
-def add_data_user(json_data, id_trip):
-    data = json.loads(json_data.decode('utf-8'))
-    id_trip = data['idTrip']
-    title = data['title']
-    description = data['description']
-    activities = data['activities']
-    with open(id_trip+'.csv', 'a', encoding='utf-8', newline='') as csvfile:
-        csv_writer = csv.writer(csvfile)
-        csv_writer.writerow([id_trip, activities, description, title])
-
-
-def get_trip_index(trips_df, idTrip):
-    return trips_df[trips_df['idTrip'] == idTrip].index[0]
-
-
-def get_trip_id(trips_df, index):
-    return trips_df[trips_df.index == index]['idTrip'].values[0]
 
 
 @app.route("/")
@@ -99,16 +53,9 @@ class UndertheseaTokenizer:
         return word_tokenize(text)
 
 
-@app.route("/recommend_products", methods=['GET'])
-def get_recommendations():
-    id_trip = json.loads(request.data.decode('utf-8'))['idTrip']
-    #get products
-    products = getOrdersByUserId('1')
-    print(products)
-    # query.getData(id_trip)
-    # add_data_user(request.data,id_trip)
-    # trips_df = pd.read_csv(id_trip+'.csv')
-    # trips_df['text'] = trips_df['title'] + ' ' + trips_df['description']+ ' ' + trips_df['activities']
+@app.route("/recommend_products/<int:user_id>", methods=['GET'])
+def get_recommendations(user_id):
+    products_user = getOrdersByUserId(str(user_id))
     products = Product.query.all()
     product_data = [
     {
@@ -125,12 +72,15 @@ def get_recommendations():
     for product in products
     ]
     df = pd.DataFrame(product_data)
+    if not products_user:  # Nếu không có sản phẩm cho người dùng cụ thể
+        recommended_product_ids = df.head(10).to_dict(orient='records')
+        return jsonify({"recommended_products": recommended_product_ids}), 200
+
     vectorizer = TfidfVectorizer(tokenizer=UndertheseaTokenizer())
     tfidf_matrix = vectorizer.fit_transform(df['Desc'])
     cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
-    product_id ="1"
+    product_id =products_user[0].Id
     try:
-        # Find the index of the product in the DataFrame
         product_index = df[df['Id'] == product_id].index[0]
 
         # Get similarity scores of all products with the given product
@@ -143,7 +93,7 @@ def get_recommendations():
         top_similar_products = sim_scores[1:11]  # Change the range as needed
 
         # Retrieve recommended product IDs
-        recommended_product_ids = [df.iloc[i[0]]['Id'] for i in top_similar_products]
+        recommended_product_ids = [df.iloc[i[0]].to_dict() for i in top_similar_products]
 
         # Return recommended product IDs as a JSON response
         return jsonify({"recommended_products": recommended_product_ids}), 200
