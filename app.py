@@ -10,11 +10,13 @@ import query
 import os
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from database import db, Product
+from database import db, Product, Order, OrderItems
 import os
+from sqlalchemy import func
 
 
 app = Flask(__name__, instance_relative_config=True)
+
 
 app.config.from_mapping(
     SQLALCHEMY_DATABASE_URI=os.environ.get('SQLALCHEMY_DB_URI'),
@@ -25,25 +27,44 @@ db.init_app(app)
 
 with app.app_context():
     # db.create_all()
+    print('init done')
 
-    products = Product.query.all()
-    product_data = [
-    {
-        'Id': product.Id,
-        'Name': product.Name,
-        'Desc': product.Desc,
-        'Price': product.Price,
-        'BrandId': product.BrandId,
-        'ImportPrice': product.ImportPrice,
-        'CategoryId': product.CategoryId,
-        'Inventory': product.Inventory,
-        'Sold': product.Sold
-    }
-    for product in products
-    ]
-    df = pd.DataFrame(product_data)
+    # users = Product.query.filter_by(Name="Gorgeous Concrete Towels").all()
+    # print(users)
+    # orders = Order.query.filter_by(UserId="1").all()
+    # # print(orders)
+    # ordersID = [o.Id for o in orders]
+    # # print(ordersID)
+    # order_items = OrderItems.query.filter_by(OrderId=func.any(ordersID)).all()
+    # # print(order_items)
+    # productsId = [o.ProductId for o in order_items]
+    # products = Product.query.filter_by(Id=func.any(productsId)).all()
+    # print(products)
+        
 
-
+def getOrdersByUserId(userId):
+    orders = Order.query.filter_by(UserId=userId).all()
+    # print(orders)
+    ordersID = [o.Id for o in orders]
+    # print(ordersID)
+    order_items = OrderItems.query.filter_by(OrderId=func.any(ordersID)).all()
+    # print(order_items)
+    productsId = [o.ProductId for o in order_items]
+    products = Product.query.filter_by(Id=func.any(productsId)).all()
+    # print(products)
+    return products
+    # orders = Order.query.all()
+    # filtered = [project for project in orders if project.UserId == "11"]
+    # # print(filtered)
+    # for i in range(len(filtered)):
+    #     order_items = OrderItems.query.all()
+    #     itemsFiltered = [project for project in order_items if project.OrderId == filtered[i].Id]
+    #     for j in range(len(itemsFiltered)):
+    #         print(itemsFiltered[j].ProductId) 
+    #         products = Product.query.all()
+    #         productFiltered = [project for project in products if project.Id == itemsFiltered[j].ProductId]
+    #         for k in range(len(productFiltered)):
+    #             print(productFiltered[k].Name)
 
 def tokenizer(text):
     return word_tokenize(text, format="text")
@@ -80,7 +101,10 @@ class UndertheseaTokenizer:
 
 @app.route("/recommend_products", methods=['GET'])
 def get_recommendations():
-    # id_trip = json.loads(request.data.decode('utf-8'))['idTrip']
+    id_trip = json.loads(request.data.decode('utf-8'))['idTrip']
+    #get products
+    products = getOrdersByUserId('1')
+    print(products)
     # query.getData(id_trip)
     # add_data_user(request.data,id_trip)
     # trips_df = pd.read_csv(id_trip+'.csv')
